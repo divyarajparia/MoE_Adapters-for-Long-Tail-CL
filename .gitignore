@@ -1,0 +1,12 @@
+# Ignore datasets and other large/unnecessary files
+datasets/
+__pycache__/
+*.pyc
+*.pkl
+*.h5
+*.pt
+*.log
+.DS_Store
+.env
+.idea/
+.vscode/
