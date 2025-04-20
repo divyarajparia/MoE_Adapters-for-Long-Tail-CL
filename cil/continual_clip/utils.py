@@ -46,6 +46,7 @@ def save_config(config: DictConfig) -> None:
 def get_workdir(path):
     split_path = path.split("/")
     workdir_idx = split_path.index("cil")
+    print("hii", path)
     return "/".join(split_path[:workdir_idx+1])
 
 ###########################

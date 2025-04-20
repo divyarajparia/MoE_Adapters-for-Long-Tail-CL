@@ -2,12 +2,15 @@
 
 import os
 import torch.nn as nn
-
+from typing import Tuple
+from PIL import Image
 from continuum import ClassIncremental, InstanceIncremental
 from continuum.datasets import (
     CIFAR100, ImageNet100, TinyImageNet200, ImageFolderDataset, Core50
 )
 from .utils import get_dataset_class_names
+from continual_clip.imbalance_cifar import IMBALANCECIFAR100
+from continual_clip.imbalance_imagenet100 import IMBALANCEImageNet100
 
 
 class ImageNet1000(ImageFolderDataset):
@@ -36,13 +39,35 @@ class ImageNet1000(ImageFolderDataset):
 def get_dataset(cfg, is_train, transforms=None):
     if cfg.dataset == "cifar100":
         data_path = os.path.join(cfg.dataset_root, cfg.dataset)
-        dataset = CIFAR100(
-            data_path=data_path, 
-            download=True, 
-            train=is_train, 
-            # transforms=transforms
-        )
-        classes_names = dataset.dataset.classes
+        # dataset = CIFAR100(
+        #     data_path=data_path, 
+        #     download=True, 
+        #     train=is_train, 
+        #     # transforms=transforms
+        # )
+        # classes_names = dataset.dataset.classes
+        if is_train:
+            # Use imbalanced dataset for training
+            dataset = IMBALANCECIFAR100(
+                data_path=data_path,
+                imb_type=getattr(cfg, "imb_type", "exp"),
+                imb_factor=getattr(cfg, "imb_factor", 0.01),
+                rand_number=getattr(cfg, "imb_rand", 0),
+                train=True,
+                # transform=transforms,
+                download=True,
+            )
+            classes_names = list(range(100))
+        else:
+            # Use standard dataset for testing
+            dataset = CIFAR100(
+                data_path=data_path, 
+                download=True, 
+                train=False, 
+                # transforms=transforms
+            )
+            classes_names = dataset.dataset.classes
+
 
     elif cfg.dataset == "tinyimagenet":
         data_path = os.path.join(cfg.dataset_root, cfg.dataset)
@@ -54,12 +79,29 @@ def get_dataset(cfg, is_train, transforms=None):
         classes_names = get_dataset_class_names(cfg.workdir, cfg.dataset)
         
     elif cfg.dataset == "imagenet100":
-        data_path = os.path.join(cfg.dataset_root, "ImageNet")
-        dataset = ImageNet100(
-            data_path, 
-            train=is_train,
-            data_subset=os.path.join('/home/dhw/yjz_workspace/project1_y/CIL_ours_compare_v3_lr_5e_3_1router_l2/Continual-CLIP/dataset_reqs/imagenet100_splits', "train_100.txt" if is_train else "val_100.txt")
-        )
+        # data_path = os.path.join(cfg.dataset_root, "ImageNet")
+        data_path = "/data1/es22btech11013/DATA/imagenet"
+        split_file = os.path.join(
+            "/data1/es22btech11013/DATA/imagenet",
+            "train.txt" if is_train else "test.txt")
+
+        if is_train:
+            dataset = IMBALANCEImageNet100(
+                data_path,
+                train=True,
+                data_subset = split_file,
+                imb_type=getattr(cfg, "imb_type", "exp"),
+                imb_factor=getattr(cfg, "imb_factor", 0.01),
+                rand_number=getattr(cfg, "imb_rand", 0),
+            )
+        else:
+            from continuum.datasets.imagenet import ImageNet100
+            dataset = ImageNet100(
+                data_path,
+                train=False,
+                data_subset=split_file,
+            )
+      
         classes_names = get_dataset_class_names(cfg.workdir, cfg.dataset)
 
     elif cfg.dataset == "imagenet1000":

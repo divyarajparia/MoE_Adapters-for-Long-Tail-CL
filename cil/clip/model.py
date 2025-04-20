@@ -287,9 +287,9 @@ class ResidualAttentionBlock(nn.Module):
         self.attn_mask = attn_mask
         self.is_train = global_is_train
         self.step = 1
-        self.top_k = 2
+        self.top_k = 4
         self.ffn_num = 64
-        self.experts_num = 2
+        self.experts_num = 4
         self.softmax = nn.Softmax(1)
         self.softplus = nn.Softplus()
         self.noisy_gating = True

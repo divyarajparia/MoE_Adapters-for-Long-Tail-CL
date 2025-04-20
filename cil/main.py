@@ -16,6 +16,21 @@ from continual_clip import utils
 from continual_clip.models import load_model
 from continual_clip.datasets import build_cl_scenarios
 
+import random
+import numpy as np
+import torch
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # For deterministic behavior (may slow down training)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+set_seed(0)
+
 
 @hydra.main(config_path=None, config_name=None, version_base="1.1") 
 def continual_clip(cfg: DictConfig) -> None:
@@ -43,13 +58,14 @@ def continual_clip(cfg: DictConfig) -> None:
         pass
 
     acc_list = []
+    avg_acc_list = []
     metric_logger = Logger(list_subsets=["test"])
 
     # test
     for task_id, _ in enumerate(eval_dataset):
         # breakpoint()
         logging.info(f"Evaluation for task {task_id} has started.")
-        # breakpoint()
+
         model.adaptation(task_id, cfg, train_dataset, train_classes_names)  # task id 已经传入model
 
         eval_loader = DataLoader(eval_dataset[:task_id + 1], batch_size=64)
@@ -60,6 +76,8 @@ def continual_clip(cfg: DictConfig) -> None:
             metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
 
         acc_list.append(100 * metric_logger.accuracy)
+        avg_acc = 100 * metric_logger.average_incremental_accuracy  # <-- Get avg_acc value
+        avg_acc_list.append(avg_acc)  # <-- Store avg_acc for this task
         with open(cfg.log_path, 'a+') as f:
             f.write(json.dumps({
                 'task': task_id,
@@ -75,7 +93,9 @@ def continual_clip(cfg: DictConfig) -> None:
     with open(cfg.log_path, 'a+') as f:
         f.write(json.dumps({
             'last': round(acc_list[-1], 2), 
-            'avg': round(statistics.mean(acc_list), 2)
+            'avg': round(statistics.mean(acc_list), 2),
+            'avg_of_avg_acc': round(statistics.mean(avg_acc_list), 2)  # <-- Mean of all avg_acc
+
         }) + '\n')
 
         

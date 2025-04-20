@@ -1,0 +1,25 @@
+class_order: class_orders/imagenet100.yaml
+dataset_root: ../datasets/
+workdir: ''
+log_path: 'moe_tinyimgnet + stage 1 weighted loss + stage 2 (vision freeze) tailcalibx
+  oversampler '
+model_name: ViT-B/16
+prompt_template: a bad photo of a {}.
+batch_size: 64
+initial_increment: 20
+increment: 20
+scenario: class
+dataset: imagenet100
+weight_decay: 0.0
+l2: 0
+ce_method: 0
+method: MoE-Adapters
+lr: 0.001
+ls: 0.0
+we: null
+avg_freq: null
+ref_dataset: null
+ref_sentences: random
+imb_type: exp
+imb_factor: 0.01
+imb_rand: 0

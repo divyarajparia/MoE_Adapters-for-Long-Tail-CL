@@ -1,0 +1,41 @@
+hydra:
+  run:
+    dir: ./experiments/${scenario}/${dataset}_${initial_increment}-${increment}-${method}
+  job:
+    chdir: true
+
+  job_logging:
+    version: 1
+    formatters:
+      simple:
+        format: '%(message)s'
+
+class_order: "class_orders/imagenet100.yaml"  # Path to your class order file
+dataset_root: ""  # Set this to your ImageNet100 data root if needed
+workdir: ""
+log_path: "moe_imgnet + stage 1 normal loss + stage 2 (vision freeze) tailcalibx oversampler "
+model_name: "ViT-B/16"
+prompt_template: "a bad photo of a {}."
+
+batch_size: 64
+initial_increment: 20   # First task: 20 classes
+increment: 20           # Each subsequent task: 20 classes
+scenario: "class"
+dataset: "imagenet100"
+
+weight_decay: 0.0
+l2: 0
+ce_method: 0
+
+method: "MoE-Adapters"
+lr: 1e-3
+ls: 0.0
+we: 
+avg_freq:  
+ref_dataset:
+ref_sentences: random
+
+
+imb_type: "exp"
+imb_factor: 0.01
+imb_rand: 0
