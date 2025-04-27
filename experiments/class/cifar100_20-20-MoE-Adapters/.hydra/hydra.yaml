@@ -113,16 +113,14 @@ hydra:
     - hydra.mode=RUN
     task:
     - dataset_root=../datasets/
-    - class_order=class_orders/imagenet100.yaml
-    - imb_factor=0.1
-    - log_path=moe_imagenet_final_imb0.1.json
+    - class_order=class_orders/cifar100.yaml
   job:
     name: main
     chdir: true
-    override_dirname: class_order=class_orders/imagenet100.yaml,dataset_root=../datasets/,imb_factor=0.1,log_path=moe_imagenet_final_imb0.1.json
+    override_dirname: class_order=class_orders/cifar100.yaml,dataset_root=../datasets/
     id: ???
     num: ???
-    config_name: imagenet100_20-20.yaml
+    config_name: cifar100_20-20-MoE-Adapters.yaml
     env_set: {}
     env_copy: []
     config:
@@ -133,7 +131,7 @@ hydra:
   runtime:
     version: 1.2.0
     version_base: '1.1'
-    cwd: /data1/es22btech11013/MoE_Adapters-for-Long-Tail-CL/cil
+    cwd: /data1/es22btech11013/MoE_Adapters-for-Long-Tail-CL
     config_sources:
     - path: hydra.conf
       schema: pkg
@@ -144,7 +142,7 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: /data1/es22btech11013/MoE_Adapters-for-Long-Tail-CL/cil/experiments/class/imagenet100_20-20-MoE-Adapters
+    output_dir: /data1/es22btech11013/MoE_Adapters-for-Long-Tail-CL/experiments/class/cifar100_20-20-MoE-Adapters
     choices:
       hydra/env: default
       hydra/callbacks: null

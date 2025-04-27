@@ -422,6 +422,9 @@ class ResidualAttentionBlock(nn.Module):
             gates, load = self.noisy_top_k_gating(x_re, self.is_train, self.router_list[global_taskid],
                                                   self.w_noise_list[global_taskid])
             importance = gates.sum(0)
+            
+            self.accumulate_expert_importance(gates)
+        
 
             nonzero_indices = torch.nonzero(gates)
             counter = Counter(nonzero_indices[:, 1].tolist())
@@ -449,7 +452,17 @@ class ResidualAttentionBlock(nn.Module):
             x = x + self.mlp(self.ln_2(x)) + y.permute(1, 0, 2)
         else:
             x = x + self.mlp(self.ln_2(x))
+        
+    
         return x
+
+    def reset_expert_importance(self):
+        self.expert_importance_sum = torch.zeros(self.experts_num, device=next(self.parameters()).device)
+
+    def accumulate_expert_importance(self, gates):
+        if not hasattr(self, 'expert_importance_sum'):
+            self.reset_expert_importance()
+        self.expert_importance_sum += gates.sum(0).detach()
 
 
 class Transformer(nn.Module):

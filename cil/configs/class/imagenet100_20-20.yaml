@@ -13,7 +13,7 @@ hydra:
 class_order: "class_orders/imagenet100.yaml"  # Path to your class order file
 dataset_root: ""  # Set this to your ImageNet100 data root if needed
 workdir: ""
-log_path: "moe_imgnet + stage 1 normal loss + stage 2 (vision freeze) tailcalibx oversampler "
+log_path: "moe_imagenet + stage 1 normal loss + stage 2 (vision + text freeze) weighted loss + unfreeze adapters.json"
 model_name: "ViT-B/16"
 prompt_template: "a bad photo of a {}."
 

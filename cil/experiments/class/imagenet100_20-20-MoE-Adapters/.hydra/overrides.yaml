@@ -1,2 +1,4 @@
 - dataset_root=../datasets/
 - class_order=class_orders/imagenet100.yaml
+- imb_factor=0.1
+- log_path=moe_imagenet_final_imb0.1.json

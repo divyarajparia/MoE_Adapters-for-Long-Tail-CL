@@ -50,6 +50,12 @@ class ClassIncremental(nn.Module):
     
     def train(self, task_id, cfg, train_dataset, train_classes_names):        
         ### laoding dataset
+
+        for block in self.model.visual.transformer.resblocks:
+            block.reset_expert_importance()
+        for block in self.model.transformer.resblocks:
+            block.reset_expert_importance()
+
         train_loader = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=cfg.batch_size,
                                   shuffle=True, num_workers=8)
@@ -170,22 +176,6 @@ class ClassIncremental(nn.Module):
         ####------ Freeezing of top 2 adapters, balancing the dataset, and retrainig other 2 adpters-------#####
     
         ###----We now weight the samples to create a fair
-
-        # from torch.utils.data import WeightedRandomSampler
-
-        # # ###------ Weighted random sampler code -----#######
-        # # # Get all targets for the current task
-        # task_dataset = train_dataset[task_id]
-        # targets = [task_dataset[i][1] for i in range(len(task_dataset))]
-        # unique_classes = np.unique(targets)
-        # class_sample_count = np.array([np.sum(np.array(targets) == t) for t in unique_classes])
-        # weight = 1. / class_sample_count
-        # class_to_weight = {cls: w for cls, w in zip(unique_classes, weight)}
-        # samples_weight = np.array([class_to_weight[t] for t in targets])
-
-        # samples_weight = torch.from_numpy(samples_weight)
-        # sampler = WeightedRandomSampler(samples_weight, len(samples_weight), replacement=True)
-        # balanced_loader = DataLoader(task_dataset, batch_size=cfg.batch_size, sampler=sampler)
         
         # ###----TailCalibX Class Aware Sampler----####
         task_dataset = train_dataset[task_id]
@@ -201,6 +191,7 @@ class ClassIncremental(nn.Module):
         balanced_loader = DataLoader(task_dataset, batch_size=cfg.batch_size, sampler=sampler)
 
         train_iter = iter(balanced_loader)  # 获取每个step的数据集
+
         
         all_targets = []
         for _, targets, _ in balanced_loader:
@@ -225,21 +216,64 @@ class ClassIncremental(nn.Module):
         
         import random
         random_numbers = random.sample(range(4), 2)
-        # print(random_numbers)
+        print(random_numbers)
 
-        top_adapters = random_numbers  # TODO: Replace with your selection logic
-        print(top_adapters)
+        top_adapters = random_numbers
+        # print(top_adapters)
+        
+
+        ##### Code for freezing differetent adapters in different blocks ######
+        # For each block, get the top-2 experts
+        top_adapters_per_block = []
+        for block in self.model.visual.transformer.resblocks:
+            top2 = torch.topk(block.expert_importance_sum, 2).indices.tolist()
+            top_adapters_per_block.append(top2)
+            print(f"Block {block}: Top 2 experts to freeze: {top2}")
+            
+
         # Freeze adapters in all ResidualAttentionBlocks of the visual transformer
         # Freeze adapters in all ResidualAttentionBlocks of both visual and text transformers
-        for block in self.model.visual.transformer.resblocks:
+
+        # Instead of random_numbers = random.sample(range(4), 2)
+        for block, top_adapters in zip(
+                self.model.visual.transformer.resblocks,
+                top_adapters_per_block):
             for idx in top_adapters:
                 for param in block.adaptmlp_list[idx].parameters():
                     param.requires_grad = False
+        #############
+
+        #### Original Code for freezing the same adapters in all blocks #####
+        # for block in self.model.visual.transformer.resblocks:
+        #     for idx in top_adapters:
+        #         for param in block.adaptmlp_list[idx].parameters():
+        #             param.requires_grad = False
 
         for block in self.model.transformer.resblocks:
             for idx in top_adapters:
                 for param in block.adaptmlp_list[idx].parameters():
                     param.requires_grad = False
+        ############
+
+
+        ##### Code for freezing the same adapters in all blocks #####
+        # Sum expert importances across all blocks
+        # num_experts = self.model.visual.transformer.resblocks[0].experts_num  # assumes all blocks have same num_experts
+        # global_expert_importance = torch.zeros(num_experts, device=self.device)
+
+        # # Accumulate importance from all blocks
+        # for block in self.model.visual.transformer.resblocks + self.model.transformer.resblocks:
+        #     global_expert_importance += block.expert_importance_sum
+
+        # # Get the top-2 experts globally
+        # top2 = torch.topk(global_expert_importance, 2).indices.tolist()
+        # print(f"Global top 2 experts to freeze (same for all blocks): {top2}")
+
+        # # Freeze these experts in all blocks
+        # for block in self.model.visual.transformer.resblocks + self.model.transformer.resblocks:
+        #     for idx in top2:
+        #         for param in block.adaptmlp_list[idx].parameters():
+        #             param.requires_grad = False
 
         params = [
             v for k, v in self.model.named_parameters() if "adaptmlp" in k or "router" in k or "noise" in k
@@ -308,16 +342,32 @@ class ClassIncremental(nn.Module):
             optimizer.step()
 
 
-        # # ###------ Unfreezing the frozen adapters ------######
-        # # for block in self.model.visual.transformer.resblocks:
-        # #     for idx in top_adapters:
-        # #         for param in block.adaptmlp_list[idx].parameters():
-        # #             param.requires_grad = True
+        # ###------ Original Unfreezing the frozen adapters ------######
+        # for block in self.model.visual.transformer.resblocks:
+        #     for idx in top_adapters:
+        #         for param in block.adaptmlp_list[idx].parameters():
+        #             param.requires_grad = True
 
-        # # for block in self.model.transformer.resblocks:
-        # #     for idx in top_adapters:
-        # #         for param in block.adaptmlp_list[idx].parameters():
-        # #             param.requires_grad = True
+        for block in self.model.transformer.resblocks:
+            for idx in top_adapters:
+                for param in block.adaptmlp_list[idx].parameters():
+                    param.requires_grad = True
+
+        ######## Unfreezing for different experts in different blocks ####
+        for block, top_adapters in zip(
+                self.model.visual.transformer.resblocks,
+                top_adapters_per_block):
+            for idx in top_adapters:
+                for param in block.adaptmlp_list[idx].parameters():
+                    param.requires_grad = True
+        ###########
+
+        # ###### Unfreezing the same adapters in all blocks #####
+        # for block in self.model.visual.transformer.resblocks + self.model.transformer.resblocks:
+        #     for idx in top2:  # <-- use the global top2 list
+        #         for param in block.adaptmlp_list[idx].parameters():
+        #             param.requires_grad = True
+
 
         self.model.eval()
 

@@ -1,0 +1,2 @@
+{"task": 0, "acc": 95.1, "avg_acc": 95.1, "forgetting": 0.0, "acc_per_task": [95.1], "bwt": 0.0, "fwt": 0.0}
+{"task": 1, "acc": 85.82, "avg_acc": 90.46, "forgetting": 0.0, "acc_per_task": [87.15, 84.5], "bwt": 0.0, "fwt": 87.15}
