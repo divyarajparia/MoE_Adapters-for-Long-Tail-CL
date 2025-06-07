@@ -1,7 +1,7 @@
 class_order: class_orders/cifar100.yaml
 dataset_root: /data1/es22btech11013/MoE_Adapters-for-Long-Tail-CL/cil/../datasets/
 workdir: /data1/es22btech11013/MoE_Adapters-for-Long-Tail-CL/cil
-log_path: moe_cifar_imb0.01_intel(vision)random(text)freeze.json
+log_path: moe_cifar_rough.json
 model_name: ViT-B/16
 prompt_template: a bad photo of a {}.
 batch_size: 128
